@@ -887,6 +887,138 @@ function showCert(){
   document.getElementById('c-date').textContent=new Date().toLocaleDateString('uz-UZ',{year:'numeric',month:'long',day:'numeric'});
   go('cert-screen');
 }
+
+// ====== ADMIN ======
+const ADMIN_PASS='admin45';
+let admUsers=[], admSort='name', admSortAsc=true, admFilter='';
+
+function openAdmin(){
+  const p=prompt('Admin paroli:');
+  if(p!==ADMIN_PASS){alert("Noto'g'ri parol!");return;}
+  buildAdmin();
+}
+function adminBack(){
+  if(CU) showMenu();
+  else go('login-screen');
+}
+function buildAdmin(){
+  const all=GU();
+  admUsers=Object.values(all);
+  renderAdminSummary();
+  renderAdminTable();
+  goPage('admin-screen');
+}
+function renderAdminSummary(){
+  const all=admUsers;
+  const total=all.length;
+  const completed=all.filter(u=>(u.completedLevels||[]).length>=100).length;
+  const avgWpm=total>0?Math.round(all.reduce((s,u)=>{
+    const g=Math.max(u.stats&&u.stats.games||1,1);
+    return s+(u.stats&&u.stats.totalWpm||0)/g;
+  },0)/total):0;
+  const top=[...all].sort((a,b)=>(b.completedLevels||[]).length-(a.completedLevels||[]).length)[0];
+  document.getElementById('adm-user-count').textContent='jami: '+total+' foydalanuvchi';
+  document.getElementById('adm-summary').innerHTML=[
+    {v:total,l:'foydalanuvchilar',i:'&#128101;'},
+    {v:completed,l:'sertifikat oldi',i:'&#127942;'},
+    {v:avgWpm,l:"o'rtacha wpm",i:'&#9889;'},
+    {v:top?(top.completedLevels||[]).length+' daraja':'-',l:top?top.name:"top o'yinchi",i:'&#129351;'},
+  ].map(function(x){return '<div class="adm-card"><div style="font-size:22px">'+x.i+'</div><div class="adm-big">'+x.v+'</div><div class="adm-lbl">'+x.l+'</div></div>';}).join('');
+}
+function sortAdmin(field){
+  if(admSort===field)admSortAsc=!admSortAsc;
+  else{admSort=field;admSortAsc=true;}
+  renderAdminTable();
+}
+function filterAdmin(){
+  admFilter=document.getElementById('adm-search').value.toLowerCase();
+  renderAdminTable();
+}
+function escH(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function revPass(el,p){el.textContent=el.textContent==='******'?p:'******';}
+function renderAdminTable(){
+  var users=admUsers.slice();
+  if(admFilter)users=users.filter(function(u){
+    return (u.name||'').toLowerCase().indexOf(admFilter)>-1||
+           (u.username||'').toLowerCase().indexOf(admFilter)>-1||
+           (u.grade||'').toLowerCase().indexOf(admFilter)>-1||
+           (u.school||'').toLowerCase().indexOf(admFilter)>-1;
+  });
+  users.sort(function(a,b){
+    var va,vb;
+    if(admSort==='lvl'){va=(a.completedLevels||[]).length;vb=(b.completedLevels||[]).length;}
+    else if(admSort==='wpm'){
+      var ga=Math.max(a.stats&&a.stats.games||1,1),gb=Math.max(b.stats&&b.stats.games||1,1);
+      va=Math.round((a.stats&&a.stats.totalWpm||0)/ga);vb=Math.round((b.stats&&b.stats.totalWpm||0)/gb);
+    } else {va=(a.name||'').toLowerCase();vb=(b.name||'').toLowerCase();}
+    if(va<vb)return admSortAsc?-1:1;
+    if(va>vb)return admSortAsc?1:-1;
+    return 0;
+  });
+  document.getElementById('adm-tbody').innerHTML=users.map(function(u,i){
+    var done=(u.completedLevels||[]).length;
+    var g=Math.max(u.stats&&u.stats.games||1,1);
+    var wpm=Math.round((u.stats&&u.stats.totalWpm||0)/g);
+    var acc=Math.round((u.stats&&u.stats.totalAcc||0)/g);
+    var rk=getRank(done);
+    var prog=done;
+    var lvlColor=done>=100?'#4caf50':done>=50?'#e2b714':'var(--txt)';
+    var wpmTag=wpm>=60?'tag-grn':wpm>=30?'tag-acc':'tag-red';
+    var barColor=done>=100?'#4caf50':'#e2b714';
+    var passId='pass_'+escH(u.username||'');
+    return '<tr>'+
+      '<td style="color:var(--txt2)">'+(i+1)+'</td>'+
+      '<td><b>'+escH(u.name||'')+'</b><br><span style="font-size:11px;color:var(--txt2)">'+rk.i+' '+escH(rk.n)+'</span></td>'+
+      '<td><code style="color:var(--acc);font-size:12px">'+escH(u.username||'')+'</code></td>'+
+      '<td><span id="'+passId+'" class="pass-shown" onclick="revPass(this,''+escH(u.password||'')+'')">******</span></td>'+
+      '<td style="font-size:12px">'+escH(u.school||'-')+'</td>'+
+      '<td><span class="tag tag-acc">'+escH(u.grade||'-')+'</span></td>'+
+      '<td><div style="display:flex;align-items:center;gap:6px">'+
+        '<span style="font-weight:700;color:'+lvlColor+'">'+done+'/100</span>'+
+        '<div style="width:50px;height:4px;background:var(--s3);border-radius:2px;overflow:hidden">'+
+          '<div style="width:'+prog+'%;height:100%;background:'+barColor+'"></div></div>'+
+      '</div></td>'+
+      '<td><span class="tag '+wpmTag+'">'+wpm+'</span></td>'+
+      '<td>'+acc+'%</td>'+
+      '<td style="color:var(--txt2)">'+(u.stats&&u.stats.games||0)+'</td>'+
+      '<td><span class="tag tag-acc">'+(u.xp||0)+'</span></td>'+
+      '<td style="display:flex;gap:4px;flex-wrap:wrap">'+
+        '<button class="btn-ghost" style="font-size:11px;padding:3px 8px" onclick="showUserLevels(''+escH(u.username||'')+'')">darajalar</button>'+
+        '<button class="btn-ghost" style="font-size:11px;padding:3px 8px;color:#ca4754;border-color:#ca4754" onclick="resetUser(''+escH(u.username||'')+'')">reset</button>'+
+        '<button class="btn-ghost" style="font-size:11px;padding:3px 8px;color:#ca4754;border-color:#ca4754" onclick="deleteUser(''+escH(u.username||'')+'')">o'chir</button>'+
+      '</td></tr>';
+  }).join('');
+}
+function showUserLevels(username){
+  var u=GU()[username];if(!u)return;
+  var done=u.completedLevels||[];
+  document.getElementById('adm-modal-title').textContent=u.name+" — o'tilgan darajalar ("+done.length+'/100)';
+  document.getElementById('adm-modal-lvls').innerHTML=
+    Array.from({length:100},function(_,i){return i+1;}).map(function(l){
+      var ok=done.indexOf(l)>-1;
+      return '<span style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:5px;font-size:11px;font-weight:700;margin:2px;background:'+(ok?'rgba(76,175,80,.18)':'var(--s2)')+';color:'+(ok?'#4caf50':'var(--txt3)')+';border:1px solid '+(ok?'#4caf50':'var(--s3)')+'">'+( ok?'&#10003;':l)+'</span>';
+    }).join('');
+  document.getElementById('adm-lvl-modal').style.display='block';
+}
+function resetUser(username){
+  if(!confirm(username+" ning barcha darajalari o'chirilsinmi?"))return;
+  var all=GU();if(!all[username])return;
+  all[username].completedLevels=[];all[username].xp=0;all[username].stats={games:0,totalWpm:0,totalAcc:0};
+  SU(all);
+  if(CU&&CU.username===username){CU=all[username];SC({username:username});}
+  admUsers=Object.values(all);
+  renderAdminSummary();renderAdminTable();
+  toast(username+' reseti amalga oshirildi');
+}
+function deleteUser(username){
+  if(!confirm(username+" o'chirilsinmi?"))return;
+  var all=GU();delete all[username];SU(all);
+  if(CU&&CU.username===username){localStorage.removeItem('kt2_c');CU=null;}
+  admUsers=Object.values(GU());
+  renderAdminSummary();renderAdminTable();
+  toast(username+" o'chirildi");
+}
+
 </script>
 </body>
 </html>
