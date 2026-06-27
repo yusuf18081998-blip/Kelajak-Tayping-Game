@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Kelajak Texnologiyalari — Typing O'yini</title>
+<script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+:root{--bg:#0a0f1e;--surface:#111827;--surface2:#1a2235;--surface3:#222d42;--accent:#4f8ef7;--accent2:#7c3aed;--gold:#f59e0b;--green:#10b981;--red:#ef4444;--text:#f1f5f9;--text2:#94a3b8;--text3:#64748b;--radius:12px;--font:'Segoe UI',system-ui,sans-serif;--mono:'Cascadia Code','Courier New',monospace}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:100vh}
+button{cursor:pointer;font-family:var(--font)}
+input{font-family:var(--mono)}
+::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:var(--surface)}::-webkit-scrollbar-thumb{background:var(--surface3);border-radius:3px}
+@keyframes fadeIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0}}
+@keyframes shine{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
+@keyframes confetti{0%{transform:translateY(-20px) rotate(0deg);opacity:1}100%{transform:translateY(100vh) rotate(720deg);opacity:0}}
+@keyframes glow{0%,100%{box-shadow:0 0 20px rgba(79,142,247,0.3)}50%{box-shadow:0 0 40px rgba(79,142,247,0.6)}}
+@keyframes levelup{0%{transform:scale(1)}50%{transform:scale(1.08)}100%{transform:scale(1)}}
+.animate-in{animation:fadeIn .4s ease forwards}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const {useState,useEffect,useRef,useCallback,useMemo}=React;
+
+// =============== MA'LUMOTLAR BAZASI ===============
+const ALL_TEXTS=[
+// Daraja 1-10: Python asoslari
+{id:1,cat:"Python",lvl:1,text:"Python dasturlash tilida print funksiyasi ekranga matn chiqaradi."},
+{id:2,cat:"Python",lvl:2,text:"O'zgaruvchi e'lon qilish uchun Python'da faqat nom va qiymat yoziladi."},
+{id:3,cat:"Python",lvl:3,text:"if va else operatorlari dasturda shartli qarorlar qabul qilishga yordam beradi."},
+{id:4,cat:"Python",lvl:4,text:"for tsikli ro'yxatdagi har bir element ustida amallar bajarish uchun ishlatiladi."},
+{id:5,cat:"Python",lvl:5,text:"Funksiya def kalit so'zi bilan e'lon qilinadi va return natija qaytaradi."},
+{id:6,cat:"Python",lvl:6,text:"List — tartibli elementlar to'plami bo'lib, indeks orqali murojaat qilinadi."},
+{id:7,cat:"Python",lvl:7,text:"Dictionary kalit va qiymat juftliklarini saqlaydi, kalit orqali qiymat topiladi."},
+{id:8,cat:"Python",lvl:8,text:"Python'da modulni import qilish uchun import kalit so'zi ishlatiladi."},
+{id:9,cat:"Python",lvl:9,text:"Try va except bloklari xatolarni ushlash va dasturni to'xtatmaslik uchun kerak."},
+{id:10,cat:"Python",lvl:10,text:"Class — ob'ektga yo'naltirilgan dasturlashda yangi turdagi ob'ektlar yaratadi."},
+// 11-20: Internet
+{id:11,cat:"Internet",lvl:11,text:"Internet dunyo bo'ylab kompyuterlarni birlashtiruvchi global tarmoq hisoblanadi."},
+{id:12,cat:"Internet",lvl:12,text:"IP manzil tarmoqdagi har bir qurilmaning noyob identifikatorini bildiradi."},
+{id:13,cat:"Internet",lvl:13,text:"DNS xizmat domen nomlarini IP manzillarga tarjima qilish vazifasini bajaradi."},
+{id:14,cat:"Internet",lvl:14,text:"HTTP protokoli veb-sahifalarni uzatadi, HTTPS esa ma'lumotlarni shifrlaydi."},
+{id:15,cat:"Internet",lvl:15,text:"Router qurilmalar o'rtasida ma'lumot paketlarini yo'naltiruvchi tarmoq jihozi."},
+{id:16,cat:"Internet",lvl:16,text:"Bandwidth tarmoqning bir soniyada uzatishi mumkin bo'lgan ma'lumot hajmidir."},
+{id:17,cat:"Internet",lvl:17,text:"TCP protokoli ma'lumotlar to'liq va tartibda yetib borishini kafolatlaydi."},
+{id:18,cat:"Internet",lvl:18,text:"Brauzer veb-sahifalarni yuklab olib foydalanuvchiga ko'rsatuvchi dasturdir."},
+{id:19,cat:"Internet",lvl:19,text:"Cache tez-tez ishlatiladigan ma'lumotlarni vaqtinchalik saqlash mexanizmidir."},
+{id:20,cat:"Internet",lvl:20,text:"VPN foydalanuvchi internetdagi haqiqiy manzilini yashiruvchi xizmatdir."},
+// 21-30: HTML va CSS
+{id:21,cat:"HTML/CSS",lvl:21,text:"HTML veb-sahifaning tuzilmasini belgilovchi belgilash tilidir."},
+{id:22,cat:"HTML/CSS",lvl:22,text:"CSS veb-sahifalarning ko'rinishini va dizaynini boshqaruvchi uslublar tilidir."},
+{id:23,cat:"HTML/CSS",lvl:23,text:"div tegi HTML'da blok elementlarni guruhlash uchun ishlatiladi."},
+{id:24,cat:"HTML/CSS",lvl:24,text:"Flexbox CSS'da elementlarni qator yoki ustun bo'yicha joylashtirishni osonlashtiradi."},
+{id:25,cat:"HTML/CSS",lvl:25,text:"Media query ekran o'lchamiga qarab turli CSS qoidalar qo'llash imkonini beradi."},
+{id:26,cat:"HTML/CSS",lvl:26,text:"Class va ID selektorlar CSS'da elementlarni tanlab uslub qo'llash uchun kerak."},
+{id:27,cat:"HTML/CSS",lvl:27,text:"Box model margin, border, padding va content qismlardan tashkil topadi."},
+{id:28,cat:"HTML/CSS",lvl:28,text:"Grid layout CSS'da ikki o'lchamli tarmoq asosida joylashtirishni ta'minlaydi."},
+{id:29,cat:"HTML/CSS",lvl:29,text:"Responsive dizayn har xil qurilmalarda yaxshi ko'rinadigan saytlar yaratishdir."},
+{id:30,cat:"HTML/CSS",lvl:30,text:"Animatsiya CSS'da transition va keyframes yordamida elementlarga harakat qo'shadi."},
+// 31-40: Sun'iy intellekt
+{id:31,cat:"Sun'iy intellekt",lvl:31,text:"Sun'iy intellekt insonlar kabi fikrlay oladigan kompyuter tizimlari yaratish ilmidir."},
+{id:32,cat:"Sun'iy intellekt",lvl:32,text:"Mashina o'qishi AI'ning ma'lumotlardan mustaqil o'rganish qobiliyatidir."},
+{id:33,cat:"Sun'iy intellekt",lvl:33,text:"Neyron tarmoq inson miyasining ishlash tamoyillaridan ilhom olgan algoritmdir."},
+{id:34,cat:"Sun'iy intellekt",lvl:34,text:"Trening ma'lumotlari AI modelini o'qitish uchun ishlatiladigan namunalar to'plamidir."},
+{id:35,cat:"Sun'iy intellekt",lvl:35,text:"ChatGPT katta hajmdagi matnlar asosida o'qitilgan til modelidir."},
+{id:36,cat:"Sun'iy intellekt",lvl:36,text:"Kompyuter ko'rishi AI'ning rasmlar va videolarni tushunish qobiliyatidir."},
+{id:37,cat:"Sun'iy intellekt",lvl:37,text:"Tabiiy til ishlov berish AI'ning insonlar tilini tushunish va yaratish sohasidir."},
+{id:38,cat:"Sun'iy intellekt",lvl:38,text:"Overfitting model trening ma'lumotlarini juda yaxshi yodlab, yangi ma'lumotlarda yomon ishlashidir."},
+{id:39,cat:"Sun'iy intellekt",lvl:39,text:"Generativ AI yangi rasm, matn va musiqa kabi kontent yarata oladigan tizimdir."},
+{id:40,cat:"Sun'iy intellekt",lvl:40,text:"Prompt injeksiya zararli buyruqlarni AI ga kiritib, uni noto'g'ri yo'naltirishdir."},
+// 41-50: Kiberxavfsizlik
+{id:41,cat:"Kiberxavfsizlik",lvl:41,text:"Kiberxavfsizlik raqamli tizimlar va ma'lumotlarni hujumlardan himoya qilish ilmidir."},
+{id:42,cat:"Kiberxavfsizlik",lvl:42,text:"Parol — tizimga kirishda foydalanuvchi kimligini tasdiqlovchi maxfiy so'z."},
+{id:43,cat:"Kiberxavfsizlik",lvl:43,text:"Fishing hujumida aldamchi havolalar orqali foydalanuvchi ma'lumotlari o'g'irlanadi."},
+{id:44,cat:"Kiberxavfsizlik",lvl:44,text:"Ikki bosqichli autentifikatsiya hisobni paroldan tashqari bir usul bilan himoyalaydi."},
+{id:45,cat:"Kiberxavfsizlik",lvl:45,text:"Virus — o'zini boshqa fayllarga ko'chirib, kompyuterga zarar yetkazuvchi dasturdir."},
+{id:46,cat:"Kiberxavfsizlik",lvl:46,text:"Shifrlash ma'lumotlarni faqat ruxsat berilgan tomon o'qiy oladigan holatga keltiradi."},
+{id:47,cat:"Kiberxavfsizlik",lvl:47,text:"Firewall tarmoqqa kiruvchi va chiquvchi trafikni nazorat qiluvchi xavfsizlik devoridir."},
+{id:48,cat:"Kiberxavfsizlik",lvl:48,text:"DDoS hujumida minglab kompyuterlar bitta serverni bir vaqtda bombardimon qiladi."},
+{id:49,cat:"Kiberxavfsizlik",lvl:49,text:"Zero-day zaiflik dasturchilar hali xabardor bo'lmagan xavfsizlik nuqsonidir."},
+{id:50,cat:"Kiberxavfsizlik",lvl:50,text:"Penetratsion test xakerlarga o'xshab tizimning zaif joylarini oldindan topishdir."},
+// 51-60: Big Data va Cloud
+{id:51,cat:"Big Data",lvl:51,text:"Big Data an'anaviy usullar bilan qayta ishlash qiyin bo'lgan juda katta ma'lumotlardir."},
+{id:52,cat:"Big Data",lvl:52,text:"Bulut hisoblash internet orqali serverlar va dasturlardan foydalanish xizmetidir."},
+{id:53,cat:"Big Data",lvl:53,text:"Ma'lumotlar bazasi ma'lumotlarni tuzilgan holda saqlash va boshqarish tizimidir."},
+{id:54,cat:"Big Data",lvl:54,text:"SQL ma'lumotlar bazasidan ma'lumot olish uchun ishlatiladigan so'rovlar tilidir."},
+{id:55,cat:"Big Data",lvl:55,text:"Hadoop katta ma'lumotlarni ko'plab kompyuterlarda parallel qayta ishlash tizimi."},
+{id:56,cat:"Big Data",lvl:56,text:"Real-time analytics ma'lumotlarni kelib tushgan zahoti tahlil qilish texnologiyasi."},
+{id:57,cat:"Big Data",lvl:57,text:"AWS, Azure va Google Cloud dunyoning eng yirik bulut xizmat ko'rsatuvchilaridir."},
+{id:58,cat:"Big Data",lvl:58,text:"Konteyner texnologiyasi dasturlarni izolyatsiyalangan muhitda ishlatish imkonini beradi."},
+{id:59,cat:"Big Data",lvl:59,text:"Kubernetes konteynerlarni avtomatik boshqarish va masshtablash platformasidir."},
+{id:60,cat:"Big Data",lvl:60,text:"Data lake har xil formatdagi xom ma'lumotlarni katta hajmda saqlash omboridadir."},
+// 61-70: IoT va Robotlar
+{id:61,cat:"IoT",lvl:61,text:"Narsalar interneti kundalik buyumlarni interneta ulab, aqlli qiladi."},
+{id:62,cat:"IoT",lvl:62,text:"Sensor atrof-muhit ma'lumotlarini raqamli signallarga aylantiradigan qurilmadir."},
+{id:63,cat:"IoT",lvl:63,text:"Aqlli uy texnologiyalari yoritish, isitish va xavfsizlikni masofadan boshqaradi."},
+{id:64,cat:"IoT",lvl:64,text:"Wearable qurilmalar sog'liq ko'rsatkichlarini kuzatib, telefonga ma'lumot yuboradi."},
+{id:65,cat:"IoT",lvl:65,text:"Raspberry Pi — havaskorlar uchun kichik va arzon bitta plata kompyuteri."},
+{id:66,cat:"IoT",lvl:66,text:"Arduino kichik sensor va motorlarni boshqarish uchun ishlatiladigan mikrokontroller."},
+{id:67,cat:"IoT",lvl:67,text:"Drone masofadan boshqariladigan yoki avtonom uchuvchi robot qurilmasidir."},
+{id:68,cat:"IoT",lvl:68,text:"3D printer raqamli modeldan qattiq ob'ektlar yasash imkonini beradigan qurilmadir."},
+{id:69,cat:"IoT",lvl:69,text:"Avtonom avtomobil sensor va AI yordamida haydovsiz yurishga qodir mashinadir."},
+{id:70,cat:"IoT",lvl:70,text:"Aqlli shahar texnologiyalari transport, energiya va xizmatlarni optimallashtiradi."},
+// 71-80: Blockchain va kelajak
+{id:71,cat:"Blockchain",lvl:71,text:"Blockchain — markazlashmagan va o'zgartirib bo'lmaydigan ma'lumotlar zanjiridir."},
+{id:72,cat:"Blockchain",lvl:72,text:"Kriptovalyuta markaziy bank ishtirokisiz ishlaydi va shifrlash asosida himoyalanadi."},
+{id:73,cat:"Blockchain",lvl:73,text:"NFT raqamli ob'ektlarga noyob egalik huquqini tasdiqlash texnologiyasidir."},
+{id:74,cat:"Blockchain",lvl:74,text:"Aqlli shartnoma shartlar bajarilganda avtomatik ishga tushadigan kod parchasi."},
+{id:75,cat:"Blockchain",lvl:75,text:"Metaverse virtual va haqiqiy dunyo qo'shiladigan immersiv raqamli muhitdir."},
+{id:76,cat:"Blockchain",lvl:76,text:"Web3 markazlashmagan internet konsepsiyasi bo'lib, foydalanuvchilarga ko'proq nazorat beradi."},
+{id:77,cat:"Blockchain",lvl:77,text:"Kvant kompyuter klassik kompyuterdan millionlab marta tezroq hisoblash qiloladi."},
+{id:78,cat:"Blockchain",lvl:78,text:"Kengaytirilgan haqiqat real dunyo ustiga raqamli ob'ektlarni qo'shib ko'rsatadi."},
+{id:79,cat:"Blockchain",lvl:79,text:"Virtual haqiqat foydalanuvchini to'liq immersiv raqamli muhitga g'arq qiladi."},
+{id:80,cat:"Blockchain",lvl:80,text:"Biometrik autentifikatsiya barmoq izi yoki yuz orqali shaxsni tasdiqlash usuli."},
+// 81-90: Kelajak kasblari
+{id:81,cat:"Kelajak kasblari",lvl:81,text:"Ma'lumotlar olimi katta ma'lumotlar ichidan foydali naqshlar va xulosalar topadi."},
+{id:82,cat:"Kelajak kasblari",lvl:82,text:"Bulut arxitektori kompaniyalarning IT infratuzilmasini bulutga ko'chiradi."},
+{id:83,cat:"Kelajak kasblari",lvl:83,text:"UX dizayner foydalanuvchi uchun qulay va yoqimli tajriba yaratishga ixtisoslashgan."},
+{id:84,cat:"Kelajak kasblari",lvl:84,text:"DevOps muhandis dastur ishlab chiqish va joylashtirish jarayonlarini avtomatlashtiradi."},
+{id:85,cat:"Kelajak kasblari",lvl:85,text:"AI muhandisi mashina o'qishi modellarini loyihalashtiradi va ishlab chiqadi."},
+{id:86,cat:"Kelajak kasblari",lvl:86,text:"Kiberxavfsizlik tahlilchisi tizimlarni himoya qilish va tahdidlarni aniqlash bilan shug'ullanadi."},
+{id:87,cat:"Kelajak kasblari",lvl:87,text:"Blockchain dasturchisi markazlashmagan ilovalar va aqlli shartnomalar yaratadi."},
+{id:88,cat:"Kelajak kasblari",lvl:88,text:"Raqamli marketing mutaxassisi internet orqali mahsulot va xizmatlarni targ'ib qiladi."},
+{id:89,cat:"Kelajak kasblari",lvl:89,text:"Robot muhandisi sanoat va tibbiyotda ishlatiladigan avtomatik qurilmalar yaratadi."},
+{id:90,cat:"Kelajak kasblari",lvl:90,text:"Bioinformatik genetik ma'lumotlarni kompyuter yordamida tahlil qiluvchi mutaxassisdir."},
+// 91-100: Murakkab matnlar
+{id:91,cat:"Ilg'or",lvl:91,text:"Rekursiya — funksiyaning o'zini o'zi chaqirishi bo'lib, to'xtash sharti bo'lishi shart."},
+{id:92,cat:"Ilg'or",lvl:92,text:"Big O notatsiyasi algoritmning eng yomon holatdagi bajarilish vaqtini ifodalaydi."},
+{id:93,cat:"Ilg'or",lvl:93,text:"Agile metodologiya dastur loyihalarini qisqa iteratsiyalar orqali boshqarish yondashuvi."},
+{id:94,cat:"Ilg'or",lvl:94,text:"Mikrotuzilma arxitekturasi katta ilovani kichik mustaqil xizmatlarga bo'lish usuli."},
+{id:95,cat:"Ilg'or",lvl:95,text:"CI/CD — doimiy integratsiya va etkazib berish jarayoni kod sifatini avtomatik nazorat qiladi."},
+{id:96,cat:"Ilg'or",lvl:96,text:"REST API veb-xizmatlar o'rtasida ma'lumot almashinuvini standartlashtiruvchi arxitektura."},
+{id:97,cat:"Ilg'or",lvl:97,text:"Open source dasturiy ta'minot kodi ommaga ochiq bo'lib, hamma tomonidan takomillashtiriladi."},
+{id:98,cat:"Ilg'or",lvl:98,text:"Edge computing ma'lumotlarni markaz o'rniga manbaga yaqin joylarda qayta ishlaydi."},
+{id:99,cat:"Ilg'or",lvl:99,text:"Federated learning modelni markazlashmagan holda, ma'lumotlarni ulashmasdan o'qitish usuli."},
+{id:100,cat:"Ilg'or",lvl:100,text:"Kelajak texnologiyalari to'garagi bitiruvchisi sifatida zamonaviy IT sohalarini muvaffaqiyatli o'zlashtirdingiz!"},
+];
+
+const RANKS=[
+  {min:0,name:"Yangi boshlovchi",icon:"🌱",color:"#6b7280"},
+  {min:10,name:"Junior Dasturchi",icon:"💻",color:"#3b82f6"},
+  {min:25,name:"Texnologiya Ishqibozi",icon:"⚡",color:"#8b5cf6"},
+  {min:50,name:"AI Explorer",icon:"🤖",color:"#ec4899"},
+  {min:75,name:"Cyber Master",icon:"🛡️",color:"#f59e0b"},
+  {min:90,name:"Tech Prodigy",icon:"🚀",color:"#10b981"},
+  {min:100,name:"Kelajak Ustasi",icon:"🏆",color:"#f59e0b"},
+];
+
+function getRank(lvl){
+  let r=RANKS[0];
+  for(const rank of RANKS){if(lvl>=rank.min)r=rank;}
+  return r;
+}
+
+const TIME_BY_LVL=(lvl)=>{
+  if(lvl<=20)return 30;
+  if(lvl<=40)return 25;
+  if(lvl<=60)return 22;
+  if(lvl<=80)return 20;
+  return 18;
+};
+
+// =============== STORAGE ===============
+const STORAGE_KEY='kelajak_typing_v2';
+function loadData(){
+  try{const d=localStorage.getItem(STORAGE_KEY);return d?JSON.parse(d):null;}
+  catch{return null;}
+}
+function saveData(d){try{localStorage.setItem(STORAGE_KEY,JSON.stringify(d));}catch{}}
+
+// =============== CERTIFICATE ===============
+function Certificate({user,onBack}){
+  const date=new Date().toLocaleDateString('uz-UZ',{year:'numeric',month:'long',day:'numeric'});
+  return(
+    <div style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',padding:'2rem',background:'linear-gradient(135deg,#0a0f1e 0%,#1a1040 100%)'}}>
+      <div style={{background:'linear-gradient(135deg,#1a2235,#0f1729)',border:'2px solid #f59e0b',borderRadius:24,padding:'3rem',maxWidth:700,width:'100%',textAlign:'center',position:'relative',overflow:'hidden'}}>
+        <div style={{position:'absolute',top:0,left:0,right:0,height:4,background:'linear-gradient(90deg,#f59e0b,#ef4444,#8b5cf6,#3b82f6,#10b981)'}}/>
+        <div style={{fontSize:56,marginBottom:8}}>🏆</div>
+        <div style={{fontSize:13,letterSpacing:4,color:'#f59e0b',marginBottom:16,textTransform:'uppercase'}}>Sertifikat</div>
+        <h1 style={{fontSize:28,fontWeight:700,marginBottom:8,color:'#f1f5f9'}}>Muvaffaqiyatli Tamomladi</h1>
+        <p style={{color:'#94a3b8',marginBottom:24}}>Ushbu sertifikat</p>
+        <div style={{fontSize:36,fontWeight:700,color:'#f59e0b',marginBottom:8,fontStyle:'italic'}}>
+          {user.name}
+        </div>
+        <p style={{color:'#94a3b8',marginBottom:24}}>
+          {user.school && <span>{user.school} o'quvchisi, </span>}
+          {user.grade && <span>{user.grade}-sinf</span>}
+        </p>
+        <div style={{background:'rgba(79,142,247,0.1)',border:'1px solid rgba(79,142,247,0.3)',borderRadius:12,padding:'1.25rem',marginBottom:24}}>
+          <div style={{fontSize:18,fontWeight:600,color:'#f1f5f9',marginBottom:4}}>«Kelajak Texnologiyalari» To'garagi</div>
+          <div style={{color:'#94a3b8',fontSize:14}}>100 ta daraja — Typing O'yini dasturini muvaffaqiyatli tamomladi</div>
+        </div>
+        <div style={{display:'flex',justifyContent:'center',gap:24,marginBottom:28,flexWrap:'wrap'}}>
+          {[
+            {val:user.stats?.totalTexts||100,lbl:'Matnlar'},
+            {val:user.stats?.avgWpm||0,lbl:"O'rtacha so'm/min"},
+            {val:(user.stats?.avgAcc||0)+'%',lbl:"To'g'rilik"},
+          ].map((s,i)=>(
+            <div key={i} style={{background:'rgba(255,255,255,0.05)',borderRadius:10,padding:'10px 20px'}}>
+              <div style={{fontSize:22,fontWeight:700,color:'#f59e0b'}}>{s.val}</div>
+              <div style={{fontSize:12,color:'#64748b'}}>{s.lbl}</div>
+            </div>
+          ))}
+        </div>
+        <div style={{display:'flex',justifyContent:'space-between',borderTop:'1px solid rgba(255,255,255,0.1)',paddingTop:20,fontSize:13,color:'#64748b'}}>
+          <span>45-sonli Umumiy O'rta Ta'lim Maktabi</span>
+          <span>{date}</span>
+        </div>
+        <button onClick={onBack} style={{marginTop:24,background:'rgba(79,142,247,0.15)',border:'1px solid rgba(79,142,247,0.4)',color:'#4f8ef7',borderRadius:10,padding:'10px 28px',fontSize:14}}>
+          Orqaga
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// =============== LOGIN SCREEN ===============
+function LoginScreen({onLogin}){
+  const [tab,setTab]=useState('login');
+  const [form,setForm]=useState({username:'',password:'',name:'',school:'45-sonli maktab',grade:'7'});
+  const [err,setErr]=useState('');
+
+  const handle=(field,val)=>setForm(p=>({...p,[field]:val}));
+
+  const doRegister=()=>{
+    if(!form.username.trim()||!form.password.trim()||!form.name.trim()){setErr('Barcha maydonlarni to\'ldiring');return;}
+    const all=JSON.parse(localStorage.getItem('kelajak_users')||'{}');
+    if(all[form.username]){setErr('Bu foydalanuvchi nomi band');return;}
+    const user={username:form.username,password:form.password,name:form.name,school:form.school,grade:form.grade,level:1,xp:0,completedLevels:[],stats:{totalTexts:0,totalWpm:0,totalAcc:0,games:0,avgWpm:0,avgAcc:0}};
+    all[form.username]=user;
+    localStorage.setItem('kelajak_users',JSON.stringify(all));
+    onLogin(user);
+  };
+
+  const doLogin=()=>{
+    if(!form.username.trim()||!form.password.trim()){setErr('Foydalanuvchi nomi va parolni kiriting');return;}
+    const all=JSON.parse(localStorage.getItem('kelajak_users')||'{}');
+    const u=all[form.username];
+    if(!u||u.password!==form.password){setErr('Noto\'g\'ri foydalanuvchi nomi yoki parol');return;}
+    onLogin(u);
+  };
+
+  const inpStyle={width:'100%',background:'#111827',border:'1px solid #222d42',borderRadius:8,padding:'10px 14px',color:'#f1f5f9',fontSize:15,outline:'none',marginBottom:12};
+  const btnStyle={width:'100%',padding:'12px',borderRadius:10,border:'none',fontSize:15,fontWeight:600,cursor:'pointer'};
+
+  return(
+    <div style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',padding:'1rem',background:'radial-gradient(ellipse at 50% 0%,#1a1040 0%,#0a0f1e 70%)'}}>
+      <div style={{width:'100%',maxWidth:420,animation:'fadeIn .5s ease'}}>
+        <div style={{textAlign:'center',marginBottom:32}}>
+          <div style={{fontSize:48,marginBottom:8}}>⌨️</div>
+          <h1 style={{fontSize:26,fontWeight:700,color:'#f1f5f9',marginBottom:4}}>Kelajak Texnologiyalari</h1>
+          <p style={{color:'#64748b',fontSize:14}}>Typing O'yini — 100 Daraja</p>
+        </div>
+        <div style={{background:'#111827',borderRadius:16,padding:'2rem',border:'1px solid #1a2235'}}>
+          <div style={{display:'flex',marginBottom:20,background:'#0a0f1e',borderRadius:8,padding:4}}>
+            {['login','register'].map(t=>(
+              <button key={t} onClick={()=>{setTab(t);setErr('');}} style={{flex:1,padding:'8px',borderRadius:6,border:'none',fontSize:14,fontWeight:500,background:tab===t?'#1a2235':'transparent',color:tab===t?'#f1f5f9':'#64748b',transition:'all .2s'}}>
+                {t==='login'?'Kirish':'Ro\'yxatdan o\'tish'}
+              </button>
+            ))}
+          </div>
+          {tab==='register'&&<input style={inpStyle} placeholder="Ismingiz" value={form.name} onChange={e=>handle('name',e.target.value)}/>}
+          <input style={inpStyle} placeholder="Foydalanuvchi nomi" value={form.username} onChange={e=>handle('username',e.target.value)}/>
+          <input style={inpStyle} type="password" placeholder="Parol" value={form.password} onChange={e=>handle('password',e.target.value)}/>
+          {tab==='register'&&(
+            <>
+              <input style={inpStyle} placeholder="Maktab (masalan: 45-sonli maktab)" value={form.school} onChange={e=>handle('school',e.target.value)}/>
+              <input style={inpStyle} placeholder="Sinf (masalan: 7)" value={form.grade} onChange={e=>handle('grade',e.target.value)}/>
+            </>
+          )}
+          {err&&<div style={{background:'rgba(239,68,68,0.1)',border:'1px solid rgba(239,68,68,0.3)',borderRadius:8,padding:'8px 12px',color:'#ef4444',fontSize:13,marginBottom:12}}>{err}</div>}
+          <button onClick={tab==='login'?doLogin:doRegister} style={{...btnStyle,background:'linear-gradient(135deg,#4f8ef7,#7c3aed)',color:'#fff'}}>
+            {tab==='login'?'Kirish ↗':'Hisob ochish ↗'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// =============== ASOSIY O'YIN ===============
+function TypingGame({user:initUser,onLogout}){
+  const [user,setUser]=useState(initUser);
+  const [screen,setScreen]=useState('menu'); // menu|game|result|cert|levelmap
+  const [currentText,setCurrentText]=useState(null);
+  const [typed,setTyped]=useState('');
+  const [timeLeft,setTimeLeft]=useState(30);
+  const [started,setStarted]=useState(false);
+  const [finished,setFinished]=useState(false);
+  const [result,setResult]=useState(null);
+  const [showLevelUp,setShowLevelUp]=useState(false);
+  const [confettis,setConfettis]=useState([]);
+  const inputRef=useRef(null);
+  const timerRef=useRef(null);
+  const startRef=useRef(null);
+
+  const saveUser=(u)=>{
+    const all=JSON.parse(localStorage.getItem('kelajak_users')||'{}');
+    all[u.username]=u;
+    localStorage.setItem('kelajak_users',JSON.stringify(all));
+    setUser(u);
+  };
+
+  const startLevel=(lvl)=>{
+    const t=ALL_TEXTS.find(x=>x.lvl===lvl);
+    if(!t)return;
+    setCurrentText(t);
+    setTyped('');
+    setTimeLeft(TIME_BY_LVL(lvl));
+    setStarted(false);
+    setFinished(false);
+    setResult(null);
+    setScreen('game');
+    setTimeout(()=>inputRef.current?.focus(),100);
+  };
+
+  const spawnConfetti=()=>{
+    const c=Array.from({length:30},(_,i)=>({
+      id:i,x:Math.random()*100,color:['#f59e0b','#4f8ef7','#10b981','#ef4444','#8b5cf6'][i%5],
+      delay:Math.random()*1,dur:2+Math.random()*2,size:6+Math.random()*8
+    }));
+    setConfettis(c);
+    setTimeout(()=>setConfettis([]),4000);
+  };
+
+  useEffect(()=>{
+    if(!started||finished)return;
+    timerRef.current=setInterval(()=>{
+      setTimeLeft(p=>{
+        if(p<=1){clearInterval(timerRef.current);finishGame(false);return 0;}
+        return p-1;
+      });
+    },1000);
+    return()=>clearInterval(timerRef.current);
+  },[started,finished]);
+
+  const finishGame=(success)=>{
+    clearInterval(timerRef.current);
+    setFinished(true);
+    const elapsed=startRef.current?(Date.now()-startRef.current)/1000:1;
+    const t=currentText.text;
+    let errors=0,correct=0;
+    const tv=typed.slice(0,t.length);
+    for(let i=0;i<tv.length;i++){if(tv[i]===t[i])correct++;else errors++;}
+    const acc=tv.length>0?Math.round(correct/tv.length*100):0;
+    const wpm=Math.round((tv.length/5)/(elapsed/60));
+    const passed=success&&acc>=70&&tv.length>=t.length*0.9;
+    const r={wpm,acc,errors,time:Math.round(elapsed),passed,lvl:currentText.lvl};
+    setResult(r);
+
+    if(passed){
+      spawnConfetti();
+      const newUser={...user};
+      if(!newUser.completedLevels.includes(currentText.lvl)){
+        newUser.completedLevels=[...newUser.completedLevels,currentText.lvl];
+        newUser.xp=(newUser.xp||0)+currentText.lvl*10;
+        const newLvl=Math.max(...newUser.completedLevels);
+        if(newLvl>user.level){newUser.level=newLvl+1;setShowLevelUp(true);setTimeout(()=>setShowLevelUp(false),2500);}
+      }
+      newUser.stats={
+        ...newUser.stats,
+        totalTexts:(newUser.stats.totalTexts||0)+1,
+        games:(newUser.stats.games||0)+1,
+        totalWpm:(newUser.stats.totalWpm||0)+wpm,
+        totalAcc:(newUser.stats.totalAcc||0)+acc,
+        avgWpm:Math.round(((newUser.stats.totalWpm||0)+wpm)/((newUser.stats.games||0)+1)),
+        avgAcc:Math.round(((newUser.stats.totalAcc||0)+acc)/((newUser.stats.games||0)+1)),
+      };
+      saveUser(newUser);
+    }
+    setScreen('result');
+  };
+
+  const handleInput=(e)=>{
+    if(finished)return;
+    const val=e.target.value;
+    if(!started&&val.length>0){setStarted(true);startRef.current=Date.now();}
+    setTyped(val);
+    if(val.length>=currentText.text.length){finishGame(true);}
+  };
+
+  const handleKeyDown=(e)=>{
+    if(e.key==='Tab'){e.preventDefault();}
+  };
+
+  const rank=getRank(user.completedLevels?.length||0);
+  const progress=user.completedLevels?.length||0;
+
+  // SERTIFIKAT
+  if(screen==='cert'){
+    return <Certificate user={user} onBack={()=>setScreen('menu')}/>;
+  }
+
+  // O'YIN EKRANI
+  if(screen==='game'&&currentText){
+    const t=currentText.text;
+    const chars=t.split('').map((ch,i)=>{
+      let cls='';
+      if(i<typed.length){cls=typed[i]===ch?'correct':'wrong';}
+      else if(i===typed.length){cls='cursor';}
+      return{ch,cls};
+    });
+    const pct=Math.round(timeLeft/TIME_BY_LVL(currentText.lvl)*100);
+    const timerColor=timeLeft>10?'#10b981':timeLeft>5?'#f59e0b':'#ef4444';
+
+    return(
+      <div style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',padding:'1rem',background:'radial-gradient(ellipse at 50% 0%,#1a1040 0%,#0a0f1e 70%)'}}>
+        {confettis.map(c=>(
+          <div key={c.id} style={{position:'fixed',left:c.x+'%',top:'-20px',width:c.size,height:c.size,background:c.color,borderRadius:2,animation:`confetti ${c.dur}s ${c.delay}s ease-in forwards`,zIndex:999,pointerEvents:'none'}}/>
+        ))}
+        {showLevelUp&&(
+          <div style={{position:'fixed',top:'50%',left:'50%',transform:'translate(-50%,-50%)',zIndex:1000,textAlign:'center',animation:'levelup .5s ease',background:'linear-gradient(135deg,#1a2235,#0f1729)',border:'2px solid #f59e0b',borderRadius:20,padding:'2rem 3rem',pointerEvents:'none'}}>
+            <div style={{fontSize:48}}>⬆️</div>
+            <div style={{fontSize:24,fontWeight:700,color:'#f59e0b'}}>Daraja oshdi!</div>
+            <div style={{color:'#94a3b8',fontSize:14}}>Yangi daraja: {user.level}</div>
+          </div>
+        )}
+        <div style={{width:'100%',maxWidth:680,animation:'fadeIn .3s ease'}}>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
+            <button onClick={()=>{clearInterval(timerRef.current);setScreen('menu');}} style={{background:'rgba(255,255,255,0.05)',border:'1px solid #222d42',color:'#94a3b8',borderRadius:8,padding:'6px 14px',fontSize:13}}>
+              ← Orqaga
+            </button>
+            <div style={{display:'flex',alignItems:'center',gap:8}}>
+              <span style={{background:'rgba(79,142,247,0.15)',border:'1px solid rgba(79,142,247,0.3)',color:'#4f8ef7',borderRadius:20,padding:'4px 12px',fontSize:12,fontWeight:600}}>
+                {currentText.cat}
+              </span>
+              <span style={{color:'#64748b',fontSize:12}}>Daraja {currentText.lvl}</span>
+            </div>
+          </div>
+
+          <div style={{display:'flex',gap:12,marginBottom:16}}>
+            {[{val:timeLeft+'s',lbl:'Vaqt',color:timerColor},{val:(started&&typed.length>0)?Math.round((typed.length/5)/((Date.now()-startRef.current)/60000))+'':'0',lbl:"so'm/min",color:'#4f8ef7'},{val:typed.length+'/'+t.length,lbl:'Belgilar',color:'#8b5cf6'}].map((s,i)=>(
+              <div key={i} style={{flex:1,background:'#111827',border:'1px solid #1a2235',borderRadius:10,padding:'10px',textAlign:'center'}}>
+                <div style={{fontSize:20,fontWeight:700,color:s.color}}>{s.val}</div>
+                <div style={{fontSize:11,color:'#64748b',marginTop:2}}>{s.lbl}</div>
+              </div>
+            ))}
+          </div>
+
+          <div style={{height:4,background:'#111827',borderRadius:9,marginBottom:16,overflow:'hidden'}}>
+            <div style={{height:'100%',width:pct+'%',background:timerColor,borderRadius:9,transition:'width .5s linear'}}/>
+          </div>
+
+          <div style={{background:'#111827',border:'1px solid #1a2235',borderRadius:14,padding:'1.5rem',marginBottom:12,fontSize:20,lineHeight:1.8,fontFamily:'monospace',letterSpacing:.5,minHeight:80}}>
+            {chars.map((c,i)=>{
+              let style={};
+              if(c.cls==='correct')style={color:'#10b981'};
+              else if(c.cls==='wrong')style={color:'#ef4444',textDecoration:'underline',background:'rgba(239,68,68,0.15)',borderRadius:2};
+              else if(c.cls==='cursor')style={borderLeft:'2px solid #4f8ef7',animation:'pulse 1s infinite',color:'#94a3b8'};
+              else style={color:'#374151'};
+              return<span key={i} style={style}>{c.ch===' '?'\u00a0':c.ch}</span>;
+            })}
+          </div>
+
+          {!started&&(
+            <div style={{textAlign:'center',color:'#64748b',fontSize:13,marginBottom:8}}>
+              ⬇ Yozishni boshlang — vaqt avtomatik boshlanadi
+            </div>
+          )}
+
+          <input
+            ref={inputRef}
+            value={typed}
+            onChange={handleInput}
+            onKeyDown={handleKeyDown}
+            disabled={finished}
+            autoComplete="off" spellCheck="false" autoCorrect="off"
+            placeholder="Bu yerga yozing..."
+            style={{width:'100%',background:'#111827',border:'2px solid #1a2235',borderRadius:10,padding:'14px 18px',color:'#f1f5f9',fontSize:16,outline:'none',transition:'border-color .2s',borderColor:started?'#4f8ef7':'#1a2235'}}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  // NATIJA EKRANI
+  if(screen==='result'&&result){
+    return(
+      <div style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',padding:'1rem',background:'radial-gradient(ellipse at 50% 0%,#1a1040 0%,#0a0f1e 70%)'}}>
+        {confettis.map(c=>(
+          <div key={c.id} style={{position:'fixed',left:c.x+'%',top:'-20px',width:c.size,height:c.size,background:c.color,borderRadius:2,animation:`confetti ${c.dur}s ${c.delay}s ease-in forwards`,zIndex:999,pointerEvents:'none'}}/>
+        ))}
+        <div style={{width:'100%',maxWidth:500,animation:'fadeIn .4s ease'}}>
+          <div style={{background:'#111827',border:`2px solid ${result.passed?'#10b981':'#ef4444'}`,borderRadius:20,padding:'2rem',textAlign:'center'}}>
+            <div style={{fontSize:52,marginBottom:8}}>{result.passed?'🎉':'😅'}</div>
+            <h2 style={{fontSize:24,fontWeight:700,color:result.passed?'#10b981':'#ef4444',marginBottom:4}}>
+              {result.passed?'Muvaffaqiyatli!':'Vaqt tugadi yoki xatolar ko\'p'}
+            </h2>
+            <p style={{color:'#64748b',fontSize:14,marginBottom:24}}>
+              {result.passed?`Daraja ${result.lvl} o'tdi! +${result.lvl*10} XP`:'Qayta urinib ko\'ring'}
+            </p>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:24}}>
+              {[{v:result.wpm,l:"so'm/min"},{v:result.acc+'%',l:"To'g'rilik"},{v:result.time+'s',l:'Vaqt'},{v:result.errors,l:'Xatolar'}].map((s,i)=>(
+                <div key={i} style={{background:'#0a0f1e',borderRadius:10,padding:'12px'}}>
+                  <div style={{fontSize:22,fontWeight:700,color:'#f59e0b'}}>{s.v}</div>
+                  <div style={{fontSize:12,color:'#64748b'}}>{s.l}</div>
+                </div>
+              ))}
+            </div>
+            <div style={{display:'flex',gap:10,flexWrap:'wrap'}}>
+              <button onClick={()=>startLevel(result.lvl)} style={{flex:1,padding:'12px',borderRadius:10,border:'none',background:'rgba(79,142,247,0.15)',color:'#4f8ef7',fontSize:14,fontWeight:600,border:'1px solid rgba(79,142,247,0.3)'}}>
+                🔄 Qayta
+              </button>
+              {result.passed&&result.lvl<100&&(
+                <button onClick={()=>startLevel(result.lvl+1)} style={{flex:1,padding:'12px',borderRadius:10,border:'none',background:'linear-gradient(135deg,#4f8ef7,#7c3aed)',color:'#fff',fontSize:14,fontWeight:600}}>
+                  ➡ Keyingi daraja
+                </button>
+              )}
+              {result.passed&&result.lvl>=100&&(
+                <button onClick={()=>setScreen('cert')} style={{flex:1,padding:'12px',borderRadius:10,border:'none',background:'linear-gradient(135deg,#f59e0b,#ef4444)',color:'#fff',fontSize:14,fontWeight:600}}>
+                  🏆 Sertifikat olish
+                </button>
+              )}
+              <button onClick={()=>setScreen('menu')} style={{flex:1,padding:'12px',borderRadius:10,border:'1px solid #222d42',background:'transparent',color:'#94a3b8',fontSize:14}}>
+                🏠 Menyu
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // DARAJA XARITASI
+  if(screen==='levelmap'){
+    const groups=[];
+    for(let i=0;i<100;i+=10){
+      groups.push({start:i+1,end:i+10,cat:ALL_TEXTS[i].cat});
+    }
+    return(
+      <div style={{minHeight:'100vh',background:'radial-gradient(ellipse at 50% 0%,#1a1040 0%,#0a0f1e 70%)',padding:'1.5rem'}}>
+        <div style={{maxWidth:680,margin:'0 auto'}}>
+          <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:24}}>
+            <button onClick={()=>setScreen('menu')} style={{background:'rgba(255,255,255,0.05)',border:'1px solid #222d42',color:'#94a3b8',borderRadius:8,padding:'6px 14px',fontSize:13}}>← Orqaga</button>
+            <h2 style={{fontSize:20,fontWeight:600,color:'#f1f5f9'}}>Daraja xaritasi</h2>
+          </div>
+          {groups.map((g,gi)=>(
+            <div key={gi} style={{marginBottom:20}}>
+              <div style={{fontSize:13,color:'#64748b',marginBottom:8,display:'flex',alignItems:'center',gap:8}}>
+                <span style={{background:'rgba(79,142,247,0.1)',color:'#4f8ef7',padding:'2px 10px',borderRadius:20,fontSize:12}}>{g.cat}</span>
+                <span>Daraja {g.start}–{g.end}</span>
+              </div>
+              <div style={{display:'grid',gridTemplateColumns:'repeat(10,1fr)',gap:6}}>
+                {Array.from({length:10},(_,i)=>{
+                  const lvl=g.start+i;
+                  const done=user.completedLevels?.includes(lvl);
+                  const unlocked=lvl===1||(user.completedLevels?.includes(lvl-1))||false;
+                  return(
+                    <button key={lvl} onClick={()=>{if(unlocked){startLevel(lvl);}}} style={{
+                      aspectRatio:'1',borderRadius:8,border:'none',fontSize:12,fontWeight:600,cursor:unlocked?'pointer':'default',
+                      background:done?'linear-gradient(135deg,#10b981,#059669)':unlocked?'rgba(79,142,247,0.15)':'#0a0f1e',
+                      color:done?'#fff':unlocked?'#4f8ef7':'#374151',
+                      border:`1px solid ${done?'#10b981':unlocked?'rgba(79,142,247,0.3)':'#1a2235'}`,
+                      transition:'all .15s',
+                    }}>
+                      {done?'✓':unlocked?lvl:'🔒'}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+          {progress>=100&&(
+            <div style={{textAlign:'center',marginTop:20}}>
+              <button onClick={()=>setScreen('cert')} style={{background:'linear-gradient(135deg,#f59e0b,#ef4444)',border:'none',color:'#fff',borderRadius:12,padding:'14px 32px',fontSize:16,fontWeight:700}}>
+                🏆 Sertifikatni ko'rish
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // ASOSIY MENYU
+  const nextLvl=progress+1<=100?progress+1:null;
+  const xpToNext=nextLvl?(nextLvl*10):(100*10);
+  const currentXp=user.xp||0;
+
+  return(
+    <div style={{minHeight:'100vh',background:'radial-gradient(ellipse at 50% 0%,#1a1040 0%,#0a0f1e 70%)',padding:'1.5rem'}}>
+      <div style={{maxWidth:680,margin:'0 auto',animation:'fadeIn .4s ease'}}>
+        {/* Header */}
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:24}}>
+          <div style={{display:'flex',alignItems:'center',gap:10}}>
+            <div style={{width:40,height:40,borderRadius:10,background:'linear-gradient(135deg,#4f8ef7,#7c3aed)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:20}}>
+              {rank.icon}
+            </div>
+            <div>
+              <div style={{fontWeight:600,color:'#f1f5f9',fontSize:15}}>{user.name}</div>
+              <div style={{fontSize:12,color:rank.color}}>{rank.name}</div>
+            </div>
+          </div>
+          <button onClick={onLogout} style={{background:'rgba(255,255,255,0.05)',border:'1px solid #222d42',color:'#94a3b8',borderRadius:8,padding:'6px 14px',fontSize:13}}>
+            Chiqish
+          </button>
+        </div>
+
+        {/* Progress */}
+        <div style={{background:'#111827',border:'1px solid #1a2235',borderRadius:14,padding:'1.25rem',marginBottom:16}}>
+          <div style={{display:'flex',justifyContent:'space-between',marginBottom:8,fontSize:13}}>
+            <span style={{color:'#94a3b8'}}>Umumiy progress</span>
+            <span style={{color:'#f59e0b',fontWeight:600}}>{progress}/100 daraja</span>
+          </div>
+          <div style={{height:8,background:'#0a0f1e',borderRadius:9,overflow:'hidden'}}>
+            <div style={{height:'100%',width:progress+'%',background:'linear-gradient(90deg,#4f8ef7,#7c3aed)',borderRadius:9,transition:'width .5s'}}/>
+          </div>
+          <div style={{display:'flex',justifyContent:'space-between',marginTop:6,fontSize:11,color:'#374151'}}>
+            <span>{currentXp} XP</span>
+            <span>{100*100} XP max</span>
+          </div>
+        </div>
+
+        {/* Stats */}
+        <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:10,marginBottom:16}}>
+          {[
+            {v:progress,l:'Darajalar',icon:'🏅'},
+            {v:user.stats?.avgWpm||0,l:"so'm/min",icon:'⚡'},
+            {v:(user.stats?.avgAcc||0)+'%',l:"To'g'rilik",icon:'🎯'},
+          ].map((s,i)=>(
+            <div key={i} style={{background:'#111827',border:'1px solid #1a2235',borderRadius:12,padding:'14px',textAlign:'center'}}>
+              <div style={{fontSize:20,marginBottom:4}}>{s.icon}</div>
+              <div style={{fontSize:20,fontWeight:700,color:'#f59e0b'}}>{s.v}</div>
+              <div style={{fontSize:11,color:'#64748b'}}>{s.l}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Actions */}
+        <div style={{display:'flex',flexDirection:'column',gap:10}}>
+          {nextLvl&&(
+            <button onClick={()=>startLevel(nextLvl)} style={{width:'100%',padding:'16px',borderRadius:14,border:'none',background:'linear-gradient(135deg,#4f8ef7,#7c3aed)',color:'#fff',fontSize:16,fontWeight:700,position:'relative',overflow:'hidden'}}>
+              <span style={{position:'absolute',top:0,left:0,right:0,bottom:0,background:'linear-gradient(90deg,transparent,rgba(255,255,255,0.1),transparent)',animation:'shine 2s infinite'}}/>
+              ▶ {nextLvl}-daraja: {ALL_TEXTS[nextLvl-1]?.cat} — Boshlash
+            </button>
+          )}
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
+            <button onClick={()=>setScreen('levelmap')} style={{padding:'14px',borderRadius:12,border:'1px solid rgba(79,142,247,0.3)',background:'rgba(79,142,247,0.1)',color:'#4f8ef7',fontSize:14,fontWeight:600}}>
+              🗺 Barcha darajalar
+            </button>
+            {progress>=100?(
+              <button onClick={()=>setScreen('cert')} style={{padding:'14px',borderRadius:12,border:'1px solid rgba(245,158,11,0.4)',background:'rgba(245,158,11,0.15)',color:'#f59e0b',fontSize:14,fontWeight:600}}>
+                🏆 Sertifikat
+              </button>
+            ):(
+              <button onClick={()=>startLevel(Math.max(1,progress))} style={{padding:'14px',borderRadius:12,border:'1px solid #1a2235',background:'#111827',color:'#94a3b8',fontSize:14}}>
+                🔄 Oxirgi daraja
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Recent levels */}
+        {user.completedLevels?.length>0&&(
+          <div style={{marginTop:16}}>
+            <div style={{fontSize:13,color:'#64748b',marginBottom:8}}>So'nggi o'tilgan darajalar</div>
+            <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+              {[...user.completedLevels].sort((a,b)=>b-a).slice(0,15).map(l=>(
+                <span key={l} style={{background:'rgba(16,185,129,0.1)',border:'1px solid rgba(16,185,129,0.3)',color:'#10b981',borderRadius:20,padding:'3px 10px',fontSize:12}}>
+                  {l}✓
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// =============== ROOT APP ===============
+function App(){
+  const [user,setUser]=useState(()=>{
+    try{
+      const saved=localStorage.getItem('kelajak_current');
+      if(saved){
+        const u=JSON.parse(saved);
+        const all=JSON.parse(localStorage.getItem('kelajak_users')||'{}');
+        return all[u.username]||null;
+      }
+    }catch{}
+    return null;
+  });
+
+  const handleLogin=(u)=>{
+    localStorage.setItem('kelajak_current',JSON.stringify({username:u.username}));
+    setUser(u);
+  };
+  const handleLogout=()=>{
+    localStorage.removeItem('kelajak_current');
+    setUser(null);
+  };
+
+  if(!user)return <LoginScreen onLogin={handleLogin}/>;
+  return <TypingGame user={user} onLogout={handleLogout}/>;
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>
