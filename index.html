@@ -349,6 +349,7 @@ hr{border:none;border-top:1px solid var(--s2);margin:16px 0}
       <span>45-sonli Umumiy O'rta Ta'lim Maktabi</span>
       <span id="c-date"></span>
     </div>
+    <div id="c-admin-badge" style="display:none;margin-top:10px;padding:5px 14px;border-radius:20px;background:rgba(76,175,80,.12);color:#4caf50;font-size:11px;font-weight:600;border:1px solid rgba(76,175,80,.3)">✅ To'garak rahbari tomonidan tasdiqlangan</div>
     <button class="btn-ghost" style="margin-top:16px" onclick="showMenu()">← menyuga qaytish</button>
   </div>
 </div>
@@ -944,7 +945,12 @@ function showCert(){
   document.getElementById('c-wpm').textContent=Math.round((u.stats.totalWpm||0)/g);
   document.getElementById('c-acc').textContent=Math.round((u.stats.totalAcc||0)/g)+'%';
   document.getElementById('c-lvls').textContent=(u.completedLevels||[]).length;
-  document.getElementById('c-date').textContent=new Date().toLocaleDateString('uz-UZ',{year:'numeric',month:'long',day:'numeric'});
+  document.getElementById('c-date').textContent=u.adminGrantedDate||new Date().toLocaleDateString('uz-UZ',{year:'numeric',month:'long',day:'numeric'});
+  // Admin belgisi
+  var adminBadge=document.getElementById('c-admin-badge');
+  if(adminBadge){
+    adminBadge.style.display=u.adminGrantedCert?'inline-block':'none';
+  }
   go('cert-screen');
 }
 
@@ -1045,6 +1051,7 @@ function renderAdminTable(){
       '<td><span class="tag tag-acc">'+(u.xp||0)+'</span></td>'+
       '<td style="display:flex;gap:4px;flex-wrap:wrap">'+
         '<button class="btn-ghost" style="font-size:11px;padding:3px 8px" onclick="showUserLevels(\''+escH(u.username||'')+'\')">darajalar</button>'+
+        '<button class="btn-ghost" style="font-size:11px;padding:3px 8px;color:#4caf50;border-color:#4caf50" onclick="grantCert(\''+escH(u.username||'')+'\')">🏆 sertifikat</button>'+
         '<button class="btn-ghost" style="font-size:11px;padding:3px 8px;color:#ca4754;border-color:#ca4754" onclick="resetUser(\''+escH(u.username||'')+'\')">reset</button>'+
         '<button class="btn-ghost" style="font-size:11px;padding:3px 8px;color:#ca4754;border-color:#ca4754" onclick="deleteUser(\''+escH(u.username||'')+'\')">o\'chir</button>'+
       '</td></tr>';
@@ -1071,6 +1078,31 @@ function resetUser(username){
   renderAdminSummary();renderAdminTable();
   toast(username+' reseti amalga oshirildi');
 }
+function grantCert(username){
+  var all=GU();
+  var u=all[username];
+  if(!u){alert("Foydalanuvchi topilmadi!");return;}
+  var done=(u.completedLevels||[]).length;
+  if(done>=100){
+    alert(u.name+" allaqachon sertifikat olgan! (100/100 daraja)");
+    return;
+  }
+  if(!confirm(u.name+" ("+username+") ga admin tomonidan sertifikat berilsinmi?\n\nHozirgi daraja: "+done+"/100")){return;}
+  // 100 ta daraja barchasini to'ldirish
+  var allLevels=[];
+  for(var i=1;i<=100;i++) allLevels.push(i);
+  u.completedLevels=allLevels;
+  u.adminGrantedCert=true;
+  u.adminGrantedDate=new Date().toLocaleDateString('uz-UZ',{year:'numeric',month:'long',day:'numeric'});
+  all[username]=u;
+  SU(all);
+  if(CU&&CU.username===username){CU=u;SC({username:username});}
+  admUsers=Object.values(GU());
+  renderAdminSummary();
+  renderAdminTable();
+  toast("🏆 "+u.name+" ga sertifikat berildi!");
+}
+
 function deleteUser(username){
   if(!confirm(username+" o'chirilsinmi?"))return;
   var all=GU();delete all[username];SU(all);
