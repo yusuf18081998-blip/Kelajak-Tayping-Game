@@ -54,7 +54,7 @@ button:hover{opacity:.8}
 .prog-fill{height:100%;border-radius:9px;background:var(--acc);transition:width .6s ease}
 
 /* ========= TYPING AREA (monkeytype style) ========= */
-#typing-wrap{width:100%;max-width:780px;padding:0 1rem}
+#typing-wrap{width:100%;max-width:780px;padding:0 1rem;position:relative}
 
 /* Top bar */
 #top-bar{display:flex;align-items:center;gap:20px;margin-bottom:28px;color:var(--txt2);font-size:14px}
@@ -111,12 +111,19 @@ button:hover{opacity:.8}
   pointer-events:none;
 }
 
-/* Hidden real input */
+/* Hidden real input — kept inside the viewport (not off-screen) so mobile
+   browsers reliably show the on-screen keyboard when it's focused */
 #real-input{
-  position:fixed;
-  left:-9999px;
+  position:absolute;
+  top:0;
+  left:0;
+  width:10px;
+  height:10px;
   opacity:0;
-  width:1px;height:1px;
+  border:none;
+  outline:none;
+  pointer-events:none;
+  background:transparent;
 }
 
 /* Restart hint */
@@ -208,7 +215,6 @@ hr{border:none;border-top:1px solid var(--s2);margin:16px 0}
       <input class="inp" type="password" id="a-pass" placeholder="parol"/>
       <div id="a-err" style="display:none;color:var(--red);font-size:13px;margin-bottom:10px;padding:8px;background:rgba(202,71,84,.08);border-radius:6px"></div>
       <button class="btn-main" id="a-btn" onclick="doAuth()">kirish</button>
-      <div style="text-align:center;margin-top:10px"><button style="background:none;border:none;color:var(--txt2);font-size:12px;cursor:pointer;text-decoration:underline" onclick="openAdmin()">🛠 admin panel</button></div>
     </div>
   </div>
 </div>
@@ -347,6 +353,56 @@ hr{border:none;border-top:1px solid var(--s2);margin:16px 0}
   </div>
 </div>
 
+<!-- ADMIN -->
+<div class="screen" id="admin-screen" style="flex-direction:column">
+  <div class="page ai" style="max-width:1100px">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:20px;flex-wrap:wrap">
+      <div style="display:flex;align-items:center;gap:12px">
+        <button class="btn-ghost" onclick="adminBack()">← orqaga</button>
+        <h2 style="font-size:17px;font-weight:600">🛠 Admin panel</h2>
+      </div>
+      <span id="adm-user-count" style="color:var(--txt2);font-size:13px"></span>
+    </div>
+
+    <div id="adm-summary" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px"></div>
+
+    <input class="inp" id="adm-search" placeholder="qidirish: ism, username, sinf, maktab..." oninput="filterAdmin()" style="max-width:340px"/>
+
+    <div class="card" style="overflow-x:auto;padding:0">
+      <table class="adm-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th style="cursor:pointer" onclick="sortAdmin('name')">Ism</th>
+            <th>Username</th>
+            <th>Parol</th>
+            <th>Maktab</th>
+            <th>Sinf</th>
+            <th style="cursor:pointer" onclick="sortAdmin('lvl')">Daraja</th>
+            <th style="cursor:pointer" onclick="sortAdmin('wpm')">WPM</th>
+            <th>Aniqlik</th>
+            <th>O'yinlar</th>
+            <th>XP</th>
+            <th>Amallar</th>
+          </tr>
+        </thead>
+        <tbody id="adm-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- levels modal -->
+  <div id="adm-lvl-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:1000;padding-top:8vh;overflow-y:auto">
+    <div class="card" style="max-width:560px;width:90%;margin:0 auto;max-height:78vh;overflow-y:auto">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <h3 id="adm-modal-title" style="font-size:15px;font-weight:600"></h3>
+        <button class="btn-ghost" onclick="document.getElementById('adm-lvl-modal').style.display='none'">✕</button>
+      </div>
+      <div id="adm-modal-lvls" style="display:flex;flex-wrap:wrap"></div>
+    </div>
+  </div>
+</div>
+
 </div>
 
 <script>
@@ -423,7 +479,7 @@ const TEXTS=[
 {l:69,c:"IoT",t:"Avtonom avtomobil sensor va AI yordamida haydovsiz yurishga qodir mashinadir."},
 {l:70,c:"IoT",t:"Aqlli shahar texnologiyalari transport, energiya va xizmatlarni optimallashtiradi."},
 {l:71,c:"Blockchain",t:"Blockchain markazlashmagan va o'zgartirib bo'lmaydigan ma'lumotlar zanjiridir."},
-{l:72,c:"Blockchain",t:"Kriptovalyuta markaziy bank ishtirokisiz ishlaydi va shifrlash asosida himoyalanadi."},
+{l:72,c:"Blockchain",t:"Kriptovalyuta markaziy bank ishtirokisiz ishlaydi va shifrlash asosida himoyalaydi."},
 {l:73,c:"Blockchain",t:"NFT raqamli ob'ektlarga noyob egalik huquqini tasdiqlash texnologiyasidir."},
 {l:74,c:"Blockchain",t:"Aqlli shartnoma shartlar bajarilganda avtomatik ishga tushadigan kod parchasidir."},
 {l:75,c:"Blockchain",t:"Metaverse virtual va haqiqiy dunyo qo'shiladigan immersiv raqamli muhitdir."},
@@ -513,6 +569,10 @@ function doAuth(){
   const u=document.getElementById('a-user').value.trim();
   const p=document.getElementById('a-pass').value.trim();
   if(!u||!p){setErr('username va parolni kiriting');return;}
+  if(isLogin&&u===ADMIN_USER&&p===ADMIN_PASS){
+    buildAdmin();
+    return;
+  }
   const a=GU();
   if(isLogin){
     if(!a[u]||a[u].password!==p){setErr("noto'g'ri username yoki parol");return;}
@@ -586,7 +646,7 @@ function loadLevel(lvl){
   document.getElementById('live-wpm').textContent='';
   buildWords();
   go('game-screen');
-  setTimeout(focusInput,150);
+  focusInput();
 }
 
 // ====== BUILD WORD DISPLAY ======
@@ -889,6 +949,7 @@ function showCert(){
 }
 
 // ====== ADMIN ======
+const ADMIN_USER='ustoz_1';
 const ADMIN_PASS='admin45';
 let admUsers=[], admSort='name', admSortAsc=true, admFilter='';
 
@@ -970,7 +1031,7 @@ function renderAdminTable(){
       '<td style="color:var(--txt2)">'+(i+1)+'</td>'+
       '<td><b>'+escH(u.name||'')+'</b><br><span style="font-size:11px;color:var(--txt2)">'+rk.i+' '+escH(rk.n)+'</span></td>'+
       '<td><code style="color:var(--acc);font-size:12px">'+escH(u.username||'')+'</code></td>'+
-      '<td><span id="'+passId+'" class="pass-shown" onclick="revPass(this,''+escH(u.password||'')+'')">******</span></td>'+
+      '<td><span id="'+passId+'" class="pass-shown" onclick="revPass(this,\''+escH(u.password||'')+'\')">******</span></td>'+
       '<td style="font-size:12px">'+escH(u.school||'-')+'</td>'+
       '<td><span class="tag tag-acc">'+escH(u.grade||'-')+'</span></td>'+
       '<td><div style="display:flex;align-items:center;gap:6px">'+
@@ -983,9 +1044,9 @@ function renderAdminTable(){
       '<td style="color:var(--txt2)">'+(u.stats&&u.stats.games||0)+'</td>'+
       '<td><span class="tag tag-acc">'+(u.xp||0)+'</span></td>'+
       '<td style="display:flex;gap:4px;flex-wrap:wrap">'+
-        '<button class="btn-ghost" style="font-size:11px;padding:3px 8px" onclick="showUserLevels(''+escH(u.username||'')+'')">darajalar</button>'+
-        '<button class="btn-ghost" style="font-size:11px;padding:3px 8px;color:#ca4754;border-color:#ca4754" onclick="resetUser(''+escH(u.username||'')+'')">reset</button>'+
-        '<button class="btn-ghost" style="font-size:11px;padding:3px 8px;color:#ca4754;border-color:#ca4754" onclick="deleteUser(''+escH(u.username||'')+'')">o'chir</button>'+
+        '<button class="btn-ghost" style="font-size:11px;padding:3px 8px" onclick="showUserLevels(\''+escH(u.username||'')+'\')">darajalar</button>'+
+        '<button class="btn-ghost" style="font-size:11px;padding:3px 8px;color:#ca4754;border-color:#ca4754" onclick="resetUser(\''+escH(u.username||'')+'\')">reset</button>'+
+        '<button class="btn-ghost" style="font-size:11px;padding:3px 8px;color:#ca4754;border-color:#ca4754" onclick="deleteUser(\''+escH(u.username||'')+'\')">o\'chir</button>'+
       '</td></tr>';
   }).join('');
 }
